@@ -422,6 +422,7 @@ private:
     std::once_flag mRenderWarningFlag;
 
     uint64_t mLastInputBufferAvailableTs;
+    uint64_t mLastDummyWorkTs = 0;
     std::mutex mTsLock;
     bool mIsHWDecoder;
 

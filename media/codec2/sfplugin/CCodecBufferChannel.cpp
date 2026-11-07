@@ -1198,16 +1198,20 @@ void CCodecBufferChannel::feedInputBufferIfAvailable() {
 
     feedInputBufferIfAvailableInternal();
 
-    // limit this WA to qc hw decoder only
+    // Limit this workaround to supported hardware decoders.
     // if feedInputBufferIfAvailableInternal() successfully (has available input buffer),
     // mLastInputBufferAvailableTs would be updated. otherwise, not input buffer available
     if (mIsHWDecoder) {
         std::lock_guard<std::mutex> tsLock(mTsLock);
         uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
                 PipelineWatcher::Clock::now().time_since_epoch()).count();
-        if (now - mLastInputBufferAvailableTs > kPipelinePausedTimeoutMs) {
+        const uint64_t lastWakeupTs = std::max(
+                mLastInputBufferAvailableTs, mLastDummyWorkTs);
+        if (now - lastWakeupTs > kPipelinePausedTimeoutMs) {
             ALOGV("long time elapsed since last input available, let's queue a specific work to "
                     "HAL to notify something");
+            // A returned dummy work must not immediately queue another one.
+            mLastDummyWorkTs = now;
             queueDummyWork();
         }
     }
